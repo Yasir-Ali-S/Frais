@@ -1,0 +1,276 @@
+{% extends 'base.html' %} 
+
+{% block title %}Charts and Statistics{% endblock title %} 
+
+{% block content %} 
+
+{% if not expenses %}
+  <div class="text-center py-5">
+    <h5 class="font-weight-bold mb-3">
+      No expenses for this user.
+    </h5>
+    <h5 class="text-muted">
+      Please add expenses in order for charts and statistics to appear.
+    </h5>
+  </div>
+{% else %}
+  
+  <!-- Mobile-friendly chart layout -->
+  <div class="charts-container">
+    <!-- Monthly Expenses -->
+    <div class="chart-wrapper mb-4">
+      <div class="chart-card">
+        <canvas
+          id="monthly-expenses-bar-chart"
+          class="chart-canvas"
+          data-test="monthly-expenses-bar-chart"
+        ></canvas>
+      </div>
+    </div>
+
+    <!-- Weekly Expenses -->
+    <div class="chart-wrapper mb-4">
+      <div class="chart-card">
+        <canvas
+          id="weekly-expenses-bar-chart"
+          class="chart-canvas"
+          data-test="weekly-expenses-bar-chart"
+        ></canvas>
+      </div>
+    </div>
+
+    <!-- Category Distribution -->
+    <div class="chart-wrapper mb-4">
+      <div class="chart-card">
+        <canvas
+          id="total-expenses-pie-chart"
+          class="chart-canvas"
+          data-test="total-expenses-pie-chart"
+        ></canvas>
+      </div>
+    </div>
+
+    <!-- Monthly Category Distribution -->
+    <div class="chart-wrapper mb-4">
+      <div class="chart-card">
+        <canvas
+          id="monthly-expenses-pie-chart"
+          class="chart-canvas"
+          data-test="monthly-expenses-pie-chart"
+        ></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    createCharts("charts");
+  </script>
+
+{% endif %} 
+
+{% if expenses %}
+  <!-- Mobile-friendly statistics table -->
+  <div id="statistics-table" class="statistics-card" data-test="statistics-table">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <tbody>
+          <tr>
+            <td class="stat-label">Current month's total:</td>
+            <td class="stat-value" data-test="stats-current-month-expenses">
+              ₹ {{ statistics.curr_month_expense_sum }} 
+              {% if budget %} 
+                <span class="budget-info">
+                  / ₹ {{ budget }}
+                  {% if budget > statistics.curr_month_expense_sum %}
+                    <span class="badge badge-pill badge-success">under budget</span>
+                  {% else %}
+                    <span class="badge badge-pill badge-danger">over budget</span>
+                  {% endif %}
+                  <div class="budget-actions">
+                    <a href="{% url 'expenses:update_budget' %}" class="btn btn-sm btn-warning" data-test="update-budget">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <a href="{% url 'expenses:delete_budget' %}" class="btn btn-sm btn-danger ml-2" data-test="delete-budget">
+                      <i class="fas fa-trash"></i>
+                    </a>
+                  </div>
+                </span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Last month's total:</td>
+            <td class="stat-value" data-test="stats-last-month-expenses">
+              ₹ {{ statistics.one_month_ago_expense_sum }}
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Month-over-month change:</td>
+            <td class="stat-value" data-test="stats-current-month-vs-last-month-comparison">
+              {% if statistics.monthly_percentage_diff == 0 %}
+                <span class="badge badge-pill badge-secondary">0%</span>
+              {% elif statistics.monthly_percentage_diff > 100 %}
+                <span class="badge badge-pill badge-danger">{{ statistics.monthly_percentage_diff }}%</span>
+              {% else %}
+                <span class="badge badge-pill badge-success">{{ statistics.monthly_percentage_diff }}%</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Monthly average:</td>
+            <td class="stat-value" data-test="stats-monthly-expense-average">
+              ₹ {{ statistics.monthly_expense_average }}
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Daily average:</td>
+            <td class="stat-value" data-test="stats-daily-expense-average">
+              ₹ {{ statistics.daily_expense_average }}
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Biggest category:</td>
+            <td class="stat-value" data-test="stats-biggest-category-expense">
+              <div class="d-flex flex-column">
+                <span class="font-weight-bold">{{ statistics.biggest_category_expenditure.category }}</span>
+                <span class="text-primary">₹ {{ statistics.biggest_category_expenditure.amount }}</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Smallest category:</td>
+            <td class="stat-value" data-test="stats-smallest-category-expense">
+              <div class="d-flex flex-column">
+                <span class="font-weight-bold">{{ statistics.smallest_category_expenditure.category }}</span>
+                <span class="text-primary">₹ {{ statistics.smallest_category_expenditure.amount }}</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Biggest expense:</td>
+            <td class="stat-value" data-test="stats-biggest-expense">
+              <div class="d-flex flex-column">
+                <span class="font-weight-bold">{{ statistics.max_expense_content }}</span>
+                <span class="text-primary">₹ {{ statistics.max_expense }}</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-label">Smallest expense:</td>
+            <td class="stat-value" data-test="stats-smallest-expense">
+              <div class="d-flex flex-column">
+                <span class="font-weight-bold">{{ statistics.min_expense_content }}</span>
+                <span class="text-primary">₹ {{ statistics.min_expense }}</span>
+              </div>
+            </td>
+          </tr>
+          <tr class="table-active">
+            <td class="stat-label font-weight-bold">Total expenses:</td>
+            <td class="stat-value font-weight-bold" data-test="stats-total-expenses">
+              ₹ {{ statistics.sum_expense }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %} 
+
+<style>
+  /* Mobile-friendly chart styles */
+  .charts-container {
+    margin: -1rem;
+  }
+  
+  .chart-wrapper {
+    padding: 1rem;
+  }
+  
+  .chart-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 1rem;
+    height: 300px;
+  }
+  
+  .chart-canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  /* Statistics card styles */
+  .statistics-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 2rem;
+    overflow: hidden;
+  }
+  
+  .stat-label {
+    color: #6c757d;
+    font-weight: 500;
+    width: 40%;
+  }
+  
+  .stat-value {
+    font-weight: 500;
+  }
+  
+  .budget-info {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .budget-actions {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.5rem;
+  }
+  
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.4em 0.8em;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767.98px) {
+    .chart-card {
+      height: 250px;
+    }
+    
+    .stat-label {
+      width: 45%;
+    }
+    
+    .budget-info {
+      margin-top: 0.25rem;
+    }
+  }
+  
+  @media (max-width: 575.98px) {
+    .chart-card {
+      height: 200px;
+    }
+    
+    .statistics-card {
+      margin: 1rem -1rem;
+      border-radius: 0;
+    }
+    
+    .stat-label,
+    .stat-value {
+      font-size: 0.875rem;
+      padding: 0.75rem !important;
+    }
+    
+    .badge {
+      font-size: 0.7rem;
+    }
+  }
+</style>
+
+{% endblock content %}

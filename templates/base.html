@@ -1,0 +1,268 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ExpenseApp">
+    <!-- <link rel="apple-touch-icon" href="/icon-192.png"> -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+
+    <script
+      src="https://code.jquery.com/jquery-3.5.1.min.js"
+      integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
+      crossorigin="anonymous"
+    ></script>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" 
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" 
+      crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <link rel="stylesheet" type="text/css" href="{% static 'expenses/style.css' %}">
+    <script type="text/javascript" src="{% static 'js/app.js' %}"></script>
+
+    <title>{% block title %}Expense Tracker{% endblock title %}</title>
+
+    <script>
+      $.ajaxSetup({
+        headers: {
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        xhrFields: {
+          withCredentials: true
+        }
+      });
+    </script>
+  </head>
+
+  <body>
+    <!-- Mobile-friendly Navbar -->
+    <nav id="navbar" class="navbar navbar-expand-lg navbar-light bg-light shadow-sm fixed-top">
+      <a class="navbar-brand font-weight-bold d-flex align-items-center" href="{% url 'expenses:home' %}">
+        <i class="fas fa-wallet text-primary me-2"></i>
+        <span class="d-none d-sm-inline">Expense Tracker</span>
+      </a>
+      
+      <button class="navbar-toggler border-0" type="button" data-toggle="collapse" data-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item {% if request.path == '/' %}active{% endif %}">
+            <a class="nav-link d-flex align-items-center" href="{% url 'expenses:home' %}">
+              <i class="fas fa-home mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Home</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'expenses:charts' %}">
+              <i class="fas fa-chart-pie mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Charts</span>
+            </a>
+          </li>
+          {% if user.is_authenticated %}
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'expenses:import_data' %}">
+              <i class="fas fa-file-import mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Import</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'expenses:export_data' %}">
+              <i class="fas fa-file-export mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Export</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'expenses:receipt_list' %}">
+              <i class="fas fa-receipt mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Receipts</span>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+
+        <!-- Right side: Auth links -->
+        <ul class="navbar-nav ml-auto">
+          {% if user.is_authenticated %}
+          <!-- Notifications -->
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'expenses:user_notifications' %}">
+              <div class="notification-icon-container">
+                <i class="fas fa-bell notification-icon"></i>
+                {% if notification_unread_count > 0 %}
+                <span class="badge badge-danger badge-pill notification-badge">{{ notification_unread_count }}</span>
+                {% endif %}
+              </div>
+              <span class="d-inline d-lg-none ml-2">Notifications</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'accounts:logout' %}">
+              <i class="fas fa-sign-out-alt mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Logout</span>
+            </a>
+          </li>
+          {% else %}
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'accounts:signup' %}">
+              <i class="fas fa-user-plus mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Sign Up</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="{% url 'accounts:login' %}">
+              <i class="fas fa-sign-in-alt mr-2"></i>
+              <span class="d-inline d-lg-none ml-2">Login</span>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Content with padding for fixed navbar -->
+    <div class="container mt-5 pt-4" data-test="container">
+      {% block content %} {% endblock content %}
+    </div>
+
+    <style>
+      body {
+        padding-top: 56px; /* Height of navbar */
+      }
+      
+      /* Enhanced mobile-friendly navbar styling */
+      #navbar {
+        padding: 0.5rem 1rem;
+      }
+      
+      .navbar-brand {
+        font-size: 1.1rem;
+      }
+      
+      .nav-link {
+        padding: 0.5rem 1rem !important;
+        transition: background-color 0.2s ease;
+      }
+      
+      .nav-link:hover {
+        background-color: rgba(0,0,0,0.05);
+      }
+      
+      /* Enhanced notification styling */
+      .notification-icon-container {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+      
+      .notification-icon {
+        color: #343a40;
+        font-size: 1.1rem;
+        transition: color 0.2s ease;
+      }
+      
+      .notification-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        font-size: 0.65rem;
+        padding: 0.25em 0.6em;
+      }
+      
+      /* Mobile-specific styles */
+      @media (max-width: 991.98px) {
+        .navbar-collapse {
+          padding: 1rem 0;
+        }
+        
+        .nav-link {
+          padding: 0.75rem 1rem !important;
+        }
+        
+        .navbar-nav .nav-link {
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .navbar-nav:last-child .nav-link:last-child {
+          border-bottom: none;
+        }
+      }
+      
+      /* Chart container responsiveness */
+      .inlineCanvasContainer {
+        position: relative;
+        margin-bottom: 2rem;
+        padding: 1rem;
+      }
+      
+      @media (max-width: 767.98px) {
+        .inlineCanvasContainer {
+          height: 300px;
+        }
+      }
+      
+      /* Statistics table responsiveness */
+      .statistics-table {
+        margin-top: 2rem;
+        overflow-x: auto;
+      }
+      
+      .table-bg {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      
+      .statistics-table td {
+        padding: 1rem;
+        vertical-align: middle;
+      }
+      
+      @media (max-width: 575.98px) {
+        .statistics-table td {
+          padding: 0.75rem;
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+    
+    <script>
+      $(document).ready(function() {
+        // Force update the bell icon's styling on page load
+        $('.fa-bell').css('visibility', 'visible');
+      });
+    </script>
+
+    <!-- Initialize Bootstrap tooltips -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+      });
+    </script>
+  </body>
+</html>
